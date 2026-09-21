@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Tail Jetstream for Sentinel-2 matadisco records and package true-color imagery as BitTorrent v2 torrents"
 license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
-requires-python = ">=3.11"
+# Upper-bounded because libtorrent only ships wheels up to cp313 (no sdist to build from).
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "websockets>=15.0",
     "httpx>=0.28",
