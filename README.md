@@ -36,6 +36,22 @@ Configuration is via environment variables (see `Config` in
 `TARGET_STAC_COLLECTION`, `WORKER_CONCURRENCY`, `QUEUE_MAXSIZE`,
 `HTTP_TIMEOUT_SECONDS`.
 
+Running in the background
+--------------------------
+
+```console
+> cp deploy/.env.example deploy/.env   # then edit as needed
+> ./deploy/service.sh start
+> ./deploy/service.sh logs             # journalctl --user -u collab-cluster-ingest -f
+> ./deploy/service.sh stop
+```
+
+This runs the ingester as a transient `systemd --user` unit (via
+`systemd-run`), which gives crash-restart and `journalctl` logging
+without installing any unit file under `~/.config` or `/etc`. It does
+not survive a reboot on its own -- run `./deploy/service.sh start`
+again after one (e.g. from a login script or cron).
+
 Tests
 -----
 
