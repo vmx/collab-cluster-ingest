@@ -1,0 +1,19 @@
+# Template for the persistent systemd --user unit. install-service.sh
+# fills in __REPO_DIR__ and writes the result to
+# collab-cluster-ingest.service (gitignored) next to this file.
+
+[Unit]
+Description=collab-cluster-ingest (matadisco -> torrent pipeline)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=__REPO_DIR__
+EnvironmentFile=-__REPO_DIR__/deploy/.env
+ExecStart=__REPO_DIR__/.venv/bin/collab-cluster-ingest
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

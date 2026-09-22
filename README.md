@@ -52,6 +52,22 @@ without installing any unit file under `~/.config` or `/etc`. It does
 not survive a reboot on its own -- run `./deploy/service.sh start`
 again after one (e.g. from a login script or cron).
 
+For something that survives a reboot/re-login, install the persistent
+unit instead:
+
+```console
+> cp deploy/.env.example deploy/.env   # then edit as needed
+> ./deploy/service.sh install
+> ./deploy/service.sh logs
+> ./deploy/service.sh uninstall
+```
+
+The generated unit file (`deploy/collab-cluster-ingest.service`, built
+from the checked-in `.template`) stays inside the repo; `install`
+only adds a `systemctl --user link` symlink under
+`~/.config/systemd/user` pointing back at it, and `uninstall` removes
+that symlink again.
+
 Tests
 -----
 
