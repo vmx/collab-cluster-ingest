@@ -43,9 +43,14 @@ To just run the pipeline in the current terminal session, use
 `uv run collab-cluster-torrentizer` directly (see Run above).
 
 For something that keeps running in the background and survives a
-reboot/re-login, install it as a persistent `systemd --user` unit:
+reboot/re-login, install it as a persistent `systemd --user` unit. This
+requires lingering to be enabled for your user (`loginctl show-user
+$USER -p Linger`) -- without it, `systemd --user` units (and their
+manager) are killed as soon as your last session logs out, persistent
+unit or not:
 
 ```console
+> sudo loginctl enable-linger $USER   # if not already enabled
 > cp deploy/.env.example deploy/.env   # then edit as needed
 > ./deploy/service.sh install
 > ./deploy/service.sh logs             # journalctl --user -u collab-cluster-torrentizer -f

@@ -30,8 +30,20 @@ require_venv() {
     fi
 }
 
+check_linger() {
+    if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" != "yes" ]; then
+        cat >&2 <<EOF
+warning: lingering is not enabled for $(id -un) -- this unit will stop
+  when you log out, not just on reboot. Enable it with:
+    sudo loginctl enable-linger $(id -un)
+  (no reboot needed, takes effect immediately)
+EOF
+    fi
+}
+
 install_unit() {
     require_venv
+    check_linger
 
     sed "s|__REPO_DIR__|$repo_dir|g" "$template" > "$unit_file"
 
