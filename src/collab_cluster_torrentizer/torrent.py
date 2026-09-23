@@ -9,6 +9,7 @@ clients just ignore keys they don't recognize.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -29,10 +30,22 @@ def create_torrent(item_dir: Path, torrent_path: Path, *, metadata: dict[str, An
     """
     files = lt.list_files(str(item_dir))
     torrent_creator = lt.create_torrent(files, flags=lt.create_torrent.v2_only)
+    # Private: the swarm's peers come only from its beacon-built peer table
+    # (see collab-cluster-experiment/node.py), never from DHT/PEX/LSD. The
+    # private flag lives in the info dict, so it's part of the info-hash --
+    # it has to be set here, at the one place a dataset's torrent is ever
+    # built, not patched in later.
+    torrent_creator.set_priv(True)
     lt.set_piece_hashes(torrent_creator, str(item_dir.parent))
 
     entry = torrent_creator.generate()
     entry[METADATA_KEY] = json.dumps(metadata).encode()
 
-    torrent_path.write_bytes(lt.bencode(entry))
+    # Temp file + rename so a reader never sees a half-written .torrent --
+    # the file's presence is the signal that item_dir is complete and the
+    # dataset is ready to hand off.
+    blob = lt.bencode(entry)
+    tmp = torrent_path.with_suffix(f"{torrent_path.suffix}.tmp{os.getpid()}")
+    tmp.write_bytes(blob)
+    tmp.replace(torrent_path)
     return torrent_path
