@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from collab_cluster_ingest.metadata import build_metadata
+from collab_cluster_torrentizer.metadata import build_metadata
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "stac_item_sample.json").read_text())
 
@@ -26,4 +26,4 @@ def test_build_metadata_carries_matadisco_and_stac_fields():
     assert metadata["stac"]["id"] == FIXTURE["id"]
     assert metadata["stac"]["collection"] == "sentinel-2-l2a"
     assert metadata["stac"]["properties"]["eo:cloud_cover"] == FIXTURE["properties"]["eo:cloud_cover"]
-    assert "ingestedAt" in metadata
+    assert "packagedAt" in metadata

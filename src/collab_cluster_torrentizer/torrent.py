@@ -14,7 +14,7 @@ from typing import Any
 
 import libtorrent as lt
 
-METADATA_KEY = b"collab-cluster-ingest-metadata"
+METADATA_KEY = b"collab-cluster-torrentizer-metadata"
 
 
 def create_torrent(item_dir: Path, torrent_path: Path, *, metadata: dict[str, Any]) -> Path:

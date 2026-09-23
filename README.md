@@ -1,5 +1,5 @@
-collab-cluster-ingest
-======================
+collab-cluster-torrentizer
+===========================
 
 Tails [Jetstream](https://github.com/bluesky-social/jetstream) for
 [matadisco](https://github.com/ipfs-fdn/matadisco) records describing
@@ -27,11 +27,11 @@ Run
 ---
 
 ```console
-> uv run collab-cluster-ingest
+> uv run collab-cluster-torrentizer
 ```
 
 Configuration is via environment variables (see `Config` in
-`src/collab_cluster_ingest/config.py`): `JETSTREAM_URL`, `OUTPUT_DIR`,
+`src/collab_cluster_torrentizer/config.py`): `JETSTREAM_URL`, `OUTPUT_DIR`,
 `STATE_DB_PATH`, `ALLOWED_PUBLISHER_DIDS` (comma-separated, optional),
 `TARGET_STAC_COLLECTION`, `WORKER_CONCURRENCY`, `QUEUE_MAXSIZE`,
 `HTTP_TIMEOUT_SECONDS`.
@@ -42,11 +42,11 @@ Running in the background
 ```console
 > cp deploy/.env.example deploy/.env   # then edit as needed
 > ./deploy/service.sh start
-> ./deploy/service.sh logs             # journalctl --user -u collab-cluster-ingest -f
+> ./deploy/service.sh logs             # journalctl --user -u collab-cluster-torrentizer -f
 > ./deploy/service.sh stop
 ```
 
-This runs the ingester as a transient `systemd --user` unit (via
+This runs the torrentizer as a transient `systemd --user` unit (via
 `systemd-run`), which gives crash-restart and `journalctl` logging
 without installing any unit file under `~/.config` or `/etc`. It does
 not survive a reboot on its own -- run `./deploy/service.sh start`
@@ -62,7 +62,7 @@ unit instead:
 > ./deploy/service.sh uninstall
 ```
 
-The generated unit file (`deploy/collab-cluster-ingest.service`, built
+The generated unit file (`deploy/collab-cluster-torrentizer.service`, built
 from the checked-in `.template`) stays inside the repo; `install`
 only adds a `systemctl --user link` symlink under
 `~/.config/systemd/user` pointing back at it, and `uninstall` removes

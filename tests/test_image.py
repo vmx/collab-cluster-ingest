@@ -19,7 +19,7 @@ import rasterio
 from rasterio.enums import Resampling
 from rasterio.transform import from_origin
 
-from collab_cluster_ingest.image import fetch_true_color_image
+from collab_cluster_torrentizer.image import fetch_true_color_image
 
 _FULL_SIZE = 512
 _OVERVIEW_FACTORS = [2, 4]

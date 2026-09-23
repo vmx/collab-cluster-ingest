@@ -1,5 +1,5 @@
 [project]
-name = "collab-cluster-ingest"
+name = "collab-cluster-torrentizer"
 version = "0.1.0"
 description = "Tail Jetstream for Sentinel-2 matadisco records and package true-color imagery as BitTorrent v2 torrents"
 license = "MIT OR Apache-2.0"
@@ -21,14 +21,14 @@ dev = [
 ]
 
 [project.scripts]
-collab-cluster-ingest = "collab_cluster_ingest.cli:main"
+collab-cluster-torrentizer = "collab_cluster_torrentizer.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/collab_cluster_ingest"]
+packages = ["src/collab_cluster_torrentizer"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

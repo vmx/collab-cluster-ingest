@@ -7,9 +7,9 @@ from pathlib import Path
 
 import libtorrent as lt
 
-from collab_cluster_ingest.metadata import build_metadata
-from collab_cluster_ingest.packaging import package_image
-from collab_cluster_ingest.torrent import METADATA_KEY, create_torrent
+from collab_cluster_torrentizer.metadata import build_metadata
+from collab_cluster_torrentizer.packaging import package_image
+from collab_cluster_torrentizer.torrent import METADATA_KEY, create_torrent
 
 
 def test_package_and_torrent_creation_is_v2_only_with_embedded_metadata(tmp_path: Path):

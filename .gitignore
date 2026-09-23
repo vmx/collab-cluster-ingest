@@ -5,4 +5,4 @@ __pycache__/
 output/
 state.sqlite3
 deploy/.env
-deploy/collab-cluster-ingest.service
+deploy/collab-cluster-torrentizer.service

@@ -37,5 +37,5 @@ def build_metadata(
             "geometry": stac_item.get("geometry"),
             "properties": {key: properties[key] for key in _PROPERTIES_TO_KEEP if key in properties},
         },
-        "ingestedAt": datetime.now(UTC).isoformat(),
+        "packagedAt": datetime.now(UTC).isoformat(),
     }

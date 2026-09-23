@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from collab_cluster_ingest.filters import is_sentinel2_stac, is_target_publisher
+from collab_cluster_torrentizer.filters import is_sentinel2_stac, is_target_publisher
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "stac_item_sample.json").read_text())
 

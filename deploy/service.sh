@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Manages collab-cluster-ingest as a systemd --user unit, two ways:
+# Manages collab-cluster-torrentizer as a systemd --user unit, two ways:
 #
 #   start/stop/restart/status/logs -- a *transient* unit (`systemd-run`),
 #     with crash-restart and `journalctl --user` logging but no unit file
@@ -9,8 +9,8 @@
 #
 #   install/uninstall -- a *persistent* unit that does survive reboots.
 #     The real unit file is generated from
-#     collab-cluster-ingest.service.template and kept in this repo
-#     (deploy/collab-cluster-ingest.service, gitignored -- it embeds this
+#     collab-cluster-torrentizer.service.template and kept in this repo
+#     (deploy/collab-cluster-torrentizer.service, gitignored -- it embeds this
 #     machine's absolute repo path). `systemctl --user link` only adds a
 #     symlink under ~/.config/systemd/user pointing back at it, so
 #     nothing but that symlink is written outside the project directory.
@@ -20,9 +20,9 @@
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-unit=collab-cluster-ingest
-template="$repo_dir/deploy/collab-cluster-ingest.service.template"
-unit_file="$repo_dir/deploy/collab-cluster-ingest.service"
+unit=collab-cluster-torrentizer
+template="$repo_dir/deploy/collab-cluster-torrentizer.service.template"
+unit_file="$repo_dir/deploy/collab-cluster-torrentizer.service"
 
 usage() {
     echo "usage: $0 {start|stop|restart|status|logs|install|uninstall}" >&2
@@ -30,7 +30,7 @@ usage() {
 }
 
 require_venv() {
-    if [ ! -x "$repo_dir/.venv/bin/collab-cluster-ingest" ]; then
+    if [ ! -x "$repo_dir/.venv/bin/collab-cluster-torrentizer" ]; then
         echo "error: $repo_dir/.venv not found -- run 'uv sync' first" >&2
         exit 1
     fi
@@ -71,12 +71,12 @@ start() {
 
     systemd-run --user \
         --unit="$unit" \
-        --description="collab-cluster-ingest (matadisco -> torrent pipeline)" \
+        --description="collab-cluster-torrentizer (matadisco -> torrent pipeline)" \
         --working-directory="$repo_dir" \
         -p "Restart=on-failure" \
         -p "RestartSec=5" \
         "${setenv_args[@]}" \
-        "$repo_dir/.venv/bin/collab-cluster-ingest"
+        "$repo_dir/.venv/bin/collab-cluster-torrentizer"
 }
 
 install_unit() {
