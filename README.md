@@ -39,26 +39,16 @@ Configuration is via environment variables (see `Config` in
 Running in the background
 --------------------------
 
-```console
-> cp deploy/.env.example deploy/.env   # then edit as needed
-> ./deploy/service.sh start
-> ./deploy/service.sh logs             # journalctl --user -u collab-cluster-torrentizer -f
-> ./deploy/service.sh stop
-```
+To just run the pipeline in the current terminal session, use
+`uv run collab-cluster-torrentizer` directly (see Run above).
 
-This runs the torrentizer as a transient `systemd --user` unit (via
-`systemd-run`), which gives crash-restart and `journalctl` logging
-without installing any unit file under `~/.config` or `/etc`. It does
-not survive a reboot on its own -- run `./deploy/service.sh start`
-again after one (e.g. from a login script or cron).
-
-For something that survives a reboot/re-login, install the persistent
-unit instead:
+For something that keeps running in the background and survives a
+reboot/re-login, install it as a persistent `systemd --user` unit:
 
 ```console
 > cp deploy/.env.example deploy/.env   # then edit as needed
 > ./deploy/service.sh install
-> ./deploy/service.sh logs
+> ./deploy/service.sh logs             # journalctl --user -u collab-cluster-torrentizer -f
 > ./deploy/service.sh uninstall
 ```
 
@@ -66,7 +56,9 @@ The generated unit file (`deploy/collab-cluster-torrentizer.service`, built
 from the checked-in `.template`) stays inside the repo; `install`
 only adds a `systemctl --user link` symlink under
 `~/.config/systemd/user` pointing back at it, and `uninstall` removes
-that symlink again.
+that symlink again. Once installed, `./deploy/service.sh` also has
+`start`/`stop`/`restart`/`status` for controlling the unit without
+reinstalling it.
 
 Tests
 -----
