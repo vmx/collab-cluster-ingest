@@ -26,6 +26,7 @@ import asyncio
 import json
 import logging
 import random
+import time
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
@@ -36,6 +37,7 @@ import websockets
 from .config import MATADISCO_COLLECTION, Config
 from .filters import is_target_publisher
 from .state import State
+from .status import format_duration, lag_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,9 @@ _BACKOFF_INITIAL_S = 1.0
 _BACKOFF_MAX_S = 60.0
 # A connection that lived at least this long counts as healthy and resets the backoff.
 _STABLE_CONNECTION_S = 60.0
+# Identity/account events arrive every couple of seconds, so a first event this much
+# later than the requested cursor means Jetstream no longer had the events in between.
+_RESUME_GAP_WARNING_US = 60_000_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +87,10 @@ class CursorTracker:
         if self._pending[time_us] <= 0:
             del self._pending[time_us]
 
+    @property
+    def pending_count(self) -> int:
+        return self._pending.total()
+
     def safe_cursor(self) -> int | None:
         """The oldest unfinished event's time_us, or the latest seen one if nothing is pending."""
         return min(self._pending) if self._pending else self.latest
@@ -100,9 +109,16 @@ def _subscribe_url(config: Config, cursor: int | None) -> str:
 
 
 async def run_firehose(
-    config: Config, state: State, queue: asyncio.Queue[MatadiscoEvent], tracker: CursorTracker
+    config: Config,
+    state: State,
+    queue: asyncio.Queue[MatadiscoEvent],
+    tracker: CursorTracker,
+    counts: Counter[str],
 ) -> None:
-    """Connect to Jetstream and feed matching records into `queue` until cancelled."""
+    """Connect to Jetstream and feed matching records into `queue` until cancelled.
+
+    Records dropped by the publisher filter are counted under "filtered" in `counts`.
+    """
     loop = asyncio.get_running_loop()
     backoff = _BACKOFF_INITIAL_S
     while True:
@@ -116,8 +132,15 @@ async def run_firehose(
         try:
             async with websockets.connect(_subscribe_url(config, cursor)) as websocket:
                 connected_at = loop.time()
-                logger.info("connected to jetstream (cursor=%s)", cursor)
-                await _consume(websocket, config, state, queue, tracker)
+                if cursor is None:
+                    logger.info("connected to jetstream, starting live (no cursor)")
+                else:
+                    logger.info(
+                        "connected to jetstream, resuming %s behind live (cursor=%d)",
+                        format_duration(lag_seconds(cursor, time.time())),
+                        cursor,
+                    )
+                await _consume(websocket, config, state, queue, tracker, counts, cursor)
         except websockets.ConnectionClosed as exc:
             # str(exc) carries the close code and reason, e.g. "received 1011 (internal error) ...".
             logger.warning("jetstream connection closed: %s", exc)
@@ -133,15 +156,30 @@ async def run_firehose(
 
 
 async def _consume(
-    websocket: Any, config: Config, state: State, queue: asyncio.Queue[MatadiscoEvent], tracker: CursorTracker
+    websocket: Any,
+    config: Config,
+    state: State,
+    queue: asyncio.Queue[MatadiscoEvent],
+    tracker: CursorTracker,
+    counts: Counter[str],
+    cursor: int | None,
 ) -> None:
     """Read events off one connection, persisting the safe cursor at most every few seconds."""
     loop = asyncio.get_running_loop()
     last_flush = loop.time()
+    first = True
     try:
         async for raw_message in websocket:
             event = json.loads(raw_message)
             time_us = event["time_us"]
+            if first and cursor is not None and time_us - cursor > _RESUME_GAP_WARNING_US:
+                logger.warning(
+                    "requested cursor %d but jetstream resumed %s later; "
+                    "events in between were likely past its retention window and are lost",
+                    cursor,
+                    format_duration((time_us - cursor) / 1_000_000),
+                )
+            first = False
             tracker.seen(time_us)
             if loop.time() - last_flush >= _CURSOR_FLUSH_INTERVAL_S:
                 tracker.persist(state)
@@ -156,6 +194,7 @@ async def _consume(
 
             did = event["did"]
             if not is_target_publisher(did, config.allowed_publisher_dids):
+                counts["filtered"] += 1
                 continue
 
             record = commit.get("record")

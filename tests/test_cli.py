@@ -7,6 +7,7 @@ import pytest
 from collab_cluster_torrentizer import cli
 from collab_cluster_torrentizer.config import Config
 from collab_cluster_torrentizer.firehose import CursorTracker, MatadiscoEvent
+from collab_cluster_torrentizer.status import StatusReporter
 
 
 async def test_worker_marks_done_on_failure_but_not_on_cancellation(monkeypatch: pytest.MonkeyPatch):
@@ -28,12 +29,16 @@ async def test_worker_marks_done_on_failure_but_not_on_cancellation(monkeypatch:
         await queue.put(MatadiscoEvent(f"at://x/{time_us}", "did:plc:x", time_us, {}))
     tracker.seen(300)  # a later, non-queued event
 
-    worker = asyncio.create_task(cli._worker(queue, config=Config(), state=None, client=None, tracker=tracker))
+    reporter = StatusReporter(Config(), tracker, queue, now=0.0)
+    worker = asyncio.create_task(
+        cli._worker(queue, config=Config(), state=None, client=None, tracker=tracker, reporter=reporter)
+    )
     await started.wait()
     worker.cancel()
     await asyncio.gather(worker, return_exceptions=True)
 
-    # The failed event is done; the interrupted one still holds the cursor back.
+    # The failed event is done and counted; the interrupted one still holds the cursor back.
+    assert reporter.counts == {"failed": 1}
     assert tracker.safe_cursor() == 200
     tracker.done(200)
     assert tracker.safe_cursor() == 300

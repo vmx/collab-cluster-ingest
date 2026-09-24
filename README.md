@@ -34,7 +34,15 @@ Configuration is via environment variables (see `Config` in
 `src/collab_cluster_torrentizer/config.py`): `JETSTREAM_URL`, `OUTPUT_DIR`,
 `STATE_DB_PATH`, `ALLOWED_PUBLISHER_DIDS` (comma-separated, optional),
 `TARGET_STAC_COLLECTION`, `WORKER_CONCURRENCY`, `QUEUE_MAXSIZE`,
-`HTTP_TIMEOUT_SECONDS`.
+`HTTP_TIMEOUT_SECONDS`, `STATUS_INTERVAL_SECONDS`, `LAG_WARNING_SECONDS`,
+`QUEUE_FULL_WARNING_SECONDS`.
+
+Every `STATUS_INTERVAL_SECONDS` a status line is logged with how far the
+stream position trails live, the queue fill, and how many records were
+packaged, skipped as already processed, filtered out, or failed. Warnings are
+logged when the lag or a full queue persist past their thresholds, and when a
+resume lands later than the requested cursor (i.e. events were lost to
+Jetstream's retention window).
 
 Running in the background
 --------------------------

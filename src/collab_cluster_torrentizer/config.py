@@ -24,6 +24,12 @@ class Config:
     worker_concurrency: int = 4
     queue_maxsize: int = 100
     http_timeout_seconds: float = 30.0
+    # How often a status line (lag, queue, per-outcome counts) is logged.
+    status_interval_seconds: float = 300.0
+    # Warn once the stream position trails wall-clock time by more than this.
+    lag_warning_seconds: float = 600.0
+    # Warn once the worker queue has been full (firehose blocked) for longer than this.
+    queue_full_warning_seconds: float = 180.0
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Config:
@@ -37,4 +43,7 @@ class Config:
             worker_concurrency=int(env.get("WORKER_CONCURRENCY", cls.worker_concurrency)),
             queue_maxsize=int(env.get("QUEUE_MAXSIZE", cls.queue_maxsize)),
             http_timeout_seconds=float(env.get("HTTP_TIMEOUT_SECONDS", cls.http_timeout_seconds)),
+            status_interval_seconds=float(env.get("STATUS_INTERVAL_SECONDS", cls.status_interval_seconds)),
+            lag_warning_seconds=float(env.get("LAG_WARNING_SECONDS", cls.lag_warning_seconds)),
+            queue_full_warning_seconds=float(env.get("QUEUE_FULL_WARNING_SECONDS", cls.queue_full_warning_seconds)),
         )
