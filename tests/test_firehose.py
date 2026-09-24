@@ -45,7 +45,7 @@ async def test_reconnect_resumes_from_latest_cursor(tmp_path: Path, monkeypatch:
     state = State(tmp_path / "state.sqlite3")
     urls: list[str] = []
 
-    def fake_connect(url: str):
+    def fake_connect(url: str, **_kwargs):
         urls.append(url)
         if len(urls) == 1:
             return _FakeConnection(
@@ -71,7 +71,7 @@ async def test_backoff_grows_when_connections_keep_failing(tmp_path: Path, monke
     state = State(tmp_path / "state.sqlite3")
     delays: list[float] = []
 
-    def fake_connect(_url: str):
+    def fake_connect(_url: str, **_kwargs):
         return _FakeConnection([])
 
     async def fake_sleep(delay: float):
@@ -104,7 +104,7 @@ async def test_unfinished_events_hold_back_the_persisted_cursor(tmp_path: Path, 
     queue: asyncio.Queue = asyncio.Queue()
     urls: list[str] = []
 
-    def fake_connect(url: str):
+    def fake_connect(url: str, **_kwargs):
         urls.append(url)
         if len(urls) == 1:
             return _FakeConnection([_commit(100, "a"), _commit(200, "b"), {"kind": "identity", "time_us": 300}])
@@ -157,7 +157,7 @@ async def test_resume_gap_and_filtered_publishers_are_reported(
     counts: Counter[str] = Counter()
     urls: list[str] = []
 
-    def fake_connect(url: str):
+    def fake_connect(url: str, **_kwargs):
         urls.append(url)
         if len(urls) == 1:
             # Jetstream resumes an hour after the requested cursor.

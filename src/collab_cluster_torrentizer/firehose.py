@@ -34,7 +34,7 @@ from urllib.parse import urlencode
 
 import websockets
 
-from .config import MATADISCO_COLLECTION, Config
+from .config import MATADISCO_COLLECTION, USER_AGENT, Config
 from .filters import is_target_publisher
 from .state import State
 from .status import format_duration, lag_seconds
@@ -130,7 +130,9 @@ async def run_firehose(
 
         connected_at = None
         try:
-            async with websockets.connect(_subscribe_url(config, cursor)) as websocket:
+            async with websockets.connect(
+                _subscribe_url(config, cursor), user_agent_header=USER_AGENT
+            ) as websocket:
                 connected_at = loop.time()
                 if cursor is None:
                     logger.info("connected to jetstream, starting live (no cursor)")

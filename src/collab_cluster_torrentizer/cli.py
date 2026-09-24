@@ -10,7 +10,7 @@ from pathlib import Path
 
 import httpx
 
-from .config import Config
+from .config import USER_AGENT, Config
 from .firehose import CursorTracker, MatadiscoEvent, run_firehose
 from .pipeline import Outcome, process_event
 from .state import State
@@ -48,7 +48,9 @@ async def _run(config: Config) -> None:
     tracker = CursorTracker()
     reporter = StatusReporter(config, tracker, queue, now=time.time())
 
-    async with httpx.AsyncClient(timeout=config.http_timeout_seconds) as client:
+    async with httpx.AsyncClient(
+        timeout=config.http_timeout_seconds, headers={"User-Agent": USER_AGENT}
+    ) as client:
         tasks = [
             asyncio.create_task(
                 _worker(queue, config=config, state=state, client=client, tracker=tracker, reporter=reporter)

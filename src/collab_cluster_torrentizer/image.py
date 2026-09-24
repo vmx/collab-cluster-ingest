@@ -18,6 +18,8 @@ from typing import Any
 import rasterio
 from rasterio.env import Env
 
+from .config import USER_AGENT
+
 # GDAL's OVERVIEW_LEVEL open option is 0-indexed from the most detailed
 # overview (one step down from full resolution) -- "one size smaller".
 _OVERVIEW_LEVEL = 0
@@ -34,7 +36,7 @@ async def fetch_true_color_image(stac_item: dict[str, Any], dest_dir: Path) -> P
 
 def _download_overview(href: str, dest_path: Path) -> None:
     """Blocking GDAL I/O -- always call via `asyncio.to_thread`, never directly from async code."""
-    with Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR"):
+    with Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", GDAL_HTTP_USERAGENT=USER_AGENT):
         with rasterio.open(f"/vsicurl/{href}", OVERVIEW_LEVEL=_OVERVIEW_LEVEL) as src:
             profile = src.profile
             data = src.read()

@@ -8,6 +8,9 @@ from dataclasses import dataclass
 # The matadisco lexicon NSID (https://github.com/ipfs-fdn/matadisco).
 MATADISCO_COLLECTION = "cx.vmx.matadisco"
 
+# Sent with every outbound request (STAC API, imagery, Jetstream) so operators know whom to contact.
+USER_AGENT = "Volker Mische (https://vmx.cx/)"
+
 
 def _split_csv(value: str) -> tuple[str, ...]:
     return tuple(v.strip() for v in value.split(",") if v.strip())
