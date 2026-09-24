@@ -1,4 +1,4 @@
-"""Reconnect behaviour of the Jetstream consumer, driven by a fake `websockets.connect`."""
+"""Cursor tracking and reconnect behaviour of the Jetstream consumer, driven by a fake `websockets.connect`."""
 
 import asyncio
 import json
@@ -58,7 +58,7 @@ async def test_reconnect_resumes_from_latest_cursor(tmp_path: Path, monkeypatch:
     monkeypatch.setattr(firehose.asyncio, "sleep", fake_sleep)
 
     with pytest.raises(_Stop):
-        await firehose.run_firehose(Config(), state, asyncio.Queue())
+        await firehose.run_firehose(Config(), state, asyncio.Queue(), firehose.CursorTracker())
 
     assert _cursor_of(urls[0]) is None
     assert _cursor_of(urls[1]) == 200_000_000 - firehose._CURSOR_REWIND_US
@@ -81,8 +81,67 @@ async def test_backoff_grows_when_connections_keep_failing(tmp_path: Path, monke
     monkeypatch.setattr(firehose.asyncio, "sleep", fake_sleep)
 
     with pytest.raises(_Stop):
-        await firehose.run_firehose(Config(), state, asyncio.Queue())
+        await firehose.run_firehose(Config(), state, asyncio.Queue(), firehose.CursorTracker())
 
     for delay, base in zip(delays, [1, 2, 4, 8, 16, 32, 60, 60], strict=True):
         assert base <= delay <= 2 * base
 
+
+def _commit(time_us: int, rkey: str) -> dict:
+    return {
+        "kind": "commit",
+        "did": "did:plc:example",
+        "time_us": time_us,
+        "commit": {"operation": "create", "collection": "cx.vmx.matadisco", "rkey": rkey, "record": {"resource": "x"}},
+    }
+
+
+async def test_unfinished_events_hold_back_the_persisted_cursor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    state = State(tmp_path / "state.sqlite3")
+    tracker = firehose.CursorTracker()
+    queue: asyncio.Queue = asyncio.Queue()
+    urls: list[str] = []
+
+    def fake_connect(url: str):
+        urls.append(url)
+        if len(urls) == 1:
+            return _FakeConnection([_commit(100, "a"), _commit(200, "b"), {"kind": "identity", "time_us": 300}])
+        raise _Stop
+
+    async def fake_sleep(_delay: float):
+        pass
+
+    monkeypatch.setattr(firehose.websockets, "connect", fake_connect)
+    monkeypatch.setattr(firehose.asyncio, "sleep", fake_sleep)
+
+    with pytest.raises(_Stop):
+        await firehose.run_firehose(Config(), state, queue, tracker)
+
+    # Both commits are still queued, so the oldest one bounds the persisted cursor...
+    assert queue.qsize() == 2
+    assert state.get_cursor() == 100
+    # ...while an in-process reconnect resumes from the latest event seen, not re-queueing them.
+    assert _cursor_of(urls[1]) == 300 - firehose._CURSOR_REWIND_US
+
+    tracker.done(100)
+    tracker.persist(state)
+    assert state.get_cursor() == 200
+
+    tracker.done(200)
+    tracker.persist(state)
+    assert state.get_cursor() == 300
+
+
+def test_tracker_handles_duplicate_time_us():
+    tracker = firehose.CursorTracker()
+    assert tracker.safe_cursor() is None
+    for time_us in (100, 100, 200):
+        tracker.seen(time_us)
+        tracker.start(time_us)
+
+    tracker.done(100)
+    assert tracker.safe_cursor() == 100
+    tracker.done(100)
+    assert tracker.safe_cursor() == 200
+    tracker.done(200)
+    assert tracker.safe_cursor() == 200

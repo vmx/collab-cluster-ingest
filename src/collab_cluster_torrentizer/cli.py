@@ -10,7 +10,7 @@ from pathlib import Path
 import httpx
 
 from .config import Config
-from .firehose import MatadiscoEvent, run_firehose
+from .firehose import CursorTracker, MatadiscoEvent, run_firehose
 from .pipeline import process_event
 from .state import State
 
@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 
 
 async def _worker(
-    queue: asyncio.Queue[MatadiscoEvent], *, config: Config, state: State, client: httpx.AsyncClient
+    queue: asyncio.Queue[MatadiscoEvent],
+    *,
+    config: Config,
+    state: State,
+    client: httpx.AsyncClient,
+    tracker: CursorTracker,
 ) -> None:
     while True:
         event = await queue.get()
@@ -28,23 +33,27 @@ async def _worker(
             logger.exception("unhandled error processing %s", event.at_uri)
         finally:
             queue.task_done()
+        # Not reached on cancellation, so an interrupted event keeps holding the cursor back.
+        tracker.done(event.time_us)
 
 
 async def _run(config: Config) -> None:
     state = State(Path(config.state_db_path))
     queue: asyncio.Queue[MatadiscoEvent] = asyncio.Queue(maxsize=config.queue_maxsize)
+    tracker = CursorTracker()
 
     async with httpx.AsyncClient(timeout=config.http_timeout_seconds) as client:
         workers = [
-            asyncio.create_task(_worker(queue, config=config, state=state, client=client))
+            asyncio.create_task(_worker(queue, config=config, state=state, client=client, tracker=tracker))
             for _ in range(config.worker_concurrency)
         ]
         try:
-            await run_firehose(config, state, queue)
+            await run_firehose(config, state, queue, tracker)
         finally:
             for worker in workers:
                 worker.cancel()
             await asyncio.gather(*workers, return_exceptions=True)
+            tracker.persist(state)
             state.close()
 
 
